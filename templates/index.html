@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comparación de Redes Neuronales</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="background-effects">
+        <div class="glow-orb orb-1"></div>
+        <div class="glow-orb orb-2"></div>
+    </div>
+
+    <header>
+        <h1>Comparación de Modelos de IA</h1>
+        <p>Clasificación de Fashion-MNIST: <span class="highlight">Dense vs CNN vs RNN</span></p>
+    </header>
+
+    <main>
+        {% if not models_ready %}
+        <div class="card warning-card">
+            <h2>Modelos no entrenados</h2>
+            <p>Los modelos no se han entrenado aún. Por favor haz clic en el botón de abajo para iniciar el
+                entrenamiento.</p>
+            <button id="train-btn" class="btn primary-btn">Entrenar Modelos Ahora (Tomará unos minutos)</button>
+            <div id="train-status" class="hidden">
+                <div class="spinner"></div>
+                <p>Entrenando modelos... mira la consola para más detalles.</p>
+            </div>
+        </div>
+        {% else %}
+
+        <div class="dashboard">
+            <!-- Sidebar / Control Panel -->
+            <div class="panel control-panel">
+                <div class="card">
+                    <h2>Mejor Modelo: <span class="highlight">{{ best_model }}</span></h2>
+
+                    <div class="tabs">
+                        <button class="tab-btn active" data-target="tab-predict">Predicción</button>
+                        <button class="tab-btn" data-target="tab-metrics">Métricas</button>
+                        <button class="tab-btn" data-target="tab-behavior">Comportamiento</button>
+                    </div>
+                </div>
+
+                <!-- Predicción Tab -->
+                <div id="tab-predict" class="tab-content active">
+                    <div class="card">
+                        <h3>Prueba los Modelos</h3>
+                        <p class="subtitle">Dibuja una prenda (o usa una aleatoria)</p>
+
+                        <div class="canvas-container">
+                            <canvas id="drawCanvas" width="140" height="140"></canvas>
+                            <div class="canvas-controls">
+                                <button id="clear-btn" class="btn small-btn">Limpiar</button>
+                                <button id="random-btn" class="btn small-btn">Aleatorio</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="model-select">Forzar Modelo:</label>
+                            <select id="model-select">
+                                <option value="{{ best_model }}">Auto (Mejor: {{ best_model }})</option>
+                                <option value="Dense_MLP">Dense / MLP</option>
+                                <option value="CNN">CNN (Convolucional)</option>
+                                <option value="RNN_LSTM">RNN / LSTM</option>
+                            </select>
+                        </div>
+
+                        <button id="predict-btn" class="btn primary-btn full-width">Clasificar Imagen</button>
+                    </div>
+
+                    <div id="prediction-result" class="card result-card hidden">
+                        <h3>Resultado</h3>
+                        <div class="result-header">
+                            <span id="res-class" class="class-name">--</span>
+                            <span id="res-conf" class="confidence">--</span>
+                        </div>
+                        <p class="model-used">Modelo usado: <span id="res-model"></span></p>
+
+                        <div class="probs-container">
+                            <h4>Probabilidades por modelo</h4>
+                            <div id="all-preds-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Métricas Tab -->
+                <div id="tab-metrics" class="tab-content">
+                    <div class="card metrics-card">
+                        <h3>Métricas Finales</h3>
+                        {% for model, item in metrics.items() %}
+                        <div class="model-metrics">
+                            <h4>{{ model }}</h4>
+                            <div class="metric-grid">
+                                <div class="metric-box">
+                                    <span class="label">Precisión</span>
+                                    <span class="value">{{ "%.2f"|format(item.Accuracy * 100) }}%</span>
+                                </div>
+                                <div class="metric-box">
+                                    <span class="label">F1</span>
+                                    <span class="value">{{ "%.3f"|format(item['F1-Score']) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Comportamiento intro -->
+                <div id="tab-behavior" class="tab-content">
+                    <div class="card">
+                        <h3>Análisis Interno</h3>
+                        <p>Las gráficas a la derecha muestran cómo cada red procesa la información de forma distinta. La
+                            CNN extrae características locales (bordes), la RNN procesa la imagen como una secuencia
+                            (fila por fila), y la MLP procesa la imagen globalmente.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Display Panel (Graphs) -->
+            <div class="panel visual-panel">
+                <div class="card visual-card">
+                    <div class="graph-selector">
+                        <select id="graph-select">
+                            <optgroup label="Comparación de Rendimiento">
+                                <option value="accuracy_loss_comparison.png">Curvas de Aprendizaje (Accuracy/Loss)
+                                </option>
+                                <option value="metrics_comparison.png">Comparación de Métricas Finales</option>
+                                <option value="confusion_matrices.png">Matrices de Confusión</option>
+                                <option value="sample_predictions.png">Predicciones de Ejemplo</option>
+                            </optgroup>
+                            <optgroup label="Comportamiento y Arquitectura">
+                                <option value="architecture_diagrams.png">Diagramas de Arquitectura</option>
+                                <option value="weight_distributions.png">Distribución de Pesos</option>
+                                <option value="activations_heatmap.png">Heatmaps de Activación</option>
+                                <option value="cnn_feature_maps.png">Feature Maps (solo CNN)</option>
+                                <option value="gradient_magnitudes.png">Magnitud de Gradientes</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="graph-display">
+                        <img id="main-graph" src="/static/plots/accuracy_loss_comparison.png" alt="Graph"
+                            onerror="this.src=''">
+                        <div id="graph-loading" class="spinner-container hidden">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Training Button Logic
+            const trainBtn = document.getElementById('train-btn');
+            if (trainBtn) {
+                trainBtn.addEventListener('click', async () => {
+                    const statusDiv = document.getElementById('train-status');
+                    trainBtn.disabled = true;
+                    statusDiv.classList.remove('hidden');
+
+                    try {
+                        const response = await fetch('/train-models');
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            window.location.reload();
+                        } else {
+                            alert('Error durante el entrenamiento: ' + data.message);
+                        }
+                    } catch (e) {
+                        alert('Error de conexión.');
+                    } finally {
+                        trainBtn.disabled = false;
+                        statusDiv.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Tabs Logic
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    document.getElementById(btn.dataset.target).classList.add('active');
+                });
+            });
+
+            // Graph Selector Logic
+            const graphSelect = document.getElementById('graph-select');
+            const mainGraph = document.getElementById('main-graph');
+
+            if (graphSelect && mainGraph) {
+                graphSelect.addEventListener('change', (e) => {
+                    mainGraph.src = '/static/plots/' + e.target.value + '?t=' + new Date().getTime();
+                });
+            }
+
+            // Drawing Canvas Logic (simplified for 28x28 output)
+            const canvas = document.getElementById('drawCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                let isDrawing = false;
+
+                // Setup canvas
+                ctx.fillStyle = 'black';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.lineWidth = 12;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'white';
+
+                const startDrawing = (e) => {
+                    isDrawing = true;
+                    draw(e);
+                };
+
+                const stopDrawing = () => {
+                    isDrawing = false;
+                    ctx.beginPath();
+                };
+
+                const draw = (e) => {
+                    if (!isDrawing) return;
+
+                    const rect = canvas.getBoundingClientRect();
+                    const scaleX = canvas.width / rect.width;
+                    const scaleY = canvas.height / rect.height;
+
+                    const x = (e.clientX || e.touches[0].clientX) - rect.left * scaleX;
+                    const y = (e.clientY || e.touches[0].clientY) - rect.top * scaleY;
+
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                };
+
+                canvas.addEventListener('mousedown', startDrawing);
+                canvas.addEventListener('mousemove', draw);
+                canvas.addEventListener('mouseup', stopDrawing);
+                canvas.addEventListener('mouseout', stopDrawing);
+
+                // Touch support
+                canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); });
+                canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); });
+                canvas.addEventListener('touchend', stopDrawing);
+
+                document.getElementById('clear-btn').addEventListener('click', () => {
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    hideResults();
+                });
+
+                document.getElementById('random-btn').addEventListener('click', () => {
+                    // Generate random noise for fun (real app would load a test sample)
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    for (let i = 0; i < 30; i++) {
+                        ctx.beginPath();
+                        ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, Math.random() * 15, 0, Math.PI * 2);
+                        ctx.fillStyle = 'white';
+                        ctx.fill();
+                    }
+                });
+
+                // Prediction Logic
+                document.getElementById('predict-btn').addEventListener('click', async () => {
+                    const btn = document.getElementById('predict-btn');
+                    btn.disabled = true;
+                    btn.textContent = 'Procesando...';
+
+                    // Downscale canvas 140x140 to 28x28 for the model
+                    const scaledCanvas = document.createElement('canvas');
+                    scaledCanvas.width = 28;
+                    scaledCanvas.height = 28;
+                    const scaledCtx = scaledCanvas.getContext('2d');
+                    scaledCtx.drawImage(canvas, 0, 0, 28, 28);
+
+                    const imgData = scaledCtx.getImageData(0, 0, 28, 28).data;
+                    const pixels = [];
+                    // Extract grayscale values
+                    for (let i = 0; i < imgData.length; i += 4) {
+                        pixels.push(imgData[i]); // Red channel (since it's grayscale, r=g=b)
+                    }
+
+                    const model = document.getElementById('model-select').value;
+
+                    try {
+                        const response = await fetch('/predict', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ pixels, model })
+                        });
+
+                        const data = await response.json();
+                        if (data.error) throw new Error(data.error);
+
+                        showResults(data);
+                    } catch (error) {
+                        alert('Error: ' + error.message);
+                    } finally {
+                        btn.disabled = false;
+                        btn.textContent = 'Clasificar Imagen';
+                    }
+                });
+            }
+        });
+
+        function showResults(data) {
+            const resCard = document.getElementById('prediction-result');
+            resCard.classList.remove('hidden');
+
+            const sel = data.selected_prediction;
+            document.getElementById('res-class').textContent = sel.class_name;
+            document.getElementById('res-conf').textContent = (sel.confidence * 100).toFixed(1) + '% conf';
+            document.getElementById('res-model').textContent = data.best_model;
+
+            const predsContainer = document.getElementById('all-preds-container');
+            predsContainer.innerHTML = '';
+
+            for (const [modelName, predData] of Object.entries(data.all_predictions)) {
+                const isSelected = modelName === data.best_model;
+                const html = `
+                    <div class="model-pred ${isSelected ? 'selected' : ''}">
+                        <span class="m-name">${modelName}</span>
+                        <span class="m-class">${predData.class_name}</span>
+                        <span class="m-conf">${(predData.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                `;
+                predsContainer.innerHTML += html;
+            }
+        }
+
+        function hideResults() {
+            document.getElementById('prediction-result').classList.add('hidden');
+        }
+    </script>
+</body>
+
+</html>

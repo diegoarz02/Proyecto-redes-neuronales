@@ -1,0 +1,8 @@
+tensorflow
+fastapi
+uvicorn[standard]
+jinja2
+scikit-learn
+matplotlib
+numpy
+python-multipart
