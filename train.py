@@ -16,8 +16,8 @@ from models import build_dense_model, build_cnn_model, build_rnn_model, CLASS_NA
 
 PLOTS_DIR = os.path.join(os.path.dirname(__file__), 'static', 'plots')
 MODELS_DIR = os.path.join(os.path.dirname(__file__), 'saved_models')
-EPOCHS = 5
-BATCH_SIZE = 128
+EPOCHS = 3
+BATCH_SIZE = 64
 
 
 def load_data():
